@@ -9,7 +9,7 @@
 - Script de validation (colonnes, doublons, tri, couverture temporelle)
 - Peut créer 2-3 fichiers JSON factices pour tester sans attendre Nomena
 
-## 👤 Miharintsoa — Data warehouse (clean/ → Neon)
+## 👤 Miarintsoa — Data warehouse (clean/ → Neon)
 **Fichiers :** `sql/schema.sql`, `src/load_warehouse.py`
 - DDL du schéma en étoile (dim_city, dim_time, fact_air_quality)
 - Script d'upsert des dimensions puis des faits depuis `clean.csv`
