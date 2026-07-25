@@ -1,0 +1,16 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.env
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+
+# Données locales de test/dev : jamais poussées par erreur avec `git add .`
+data/raw/*
+data/clean/*
+!data/raw/.gitkeep
+!data/clean/.gitkeep

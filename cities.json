@@ -1,0 +1,8 @@
+[
+    {"city_id": "paris",         "name": "Paris",         "country": "FR", "latitude": 48.8566, "longitude": 2.3522},
+    {"city_id": "antananarivo",  "name": "Antananarivo",  "country": "MG", "latitude": -18.8792, "longitude": 47.5079},
+    {"city_id": "new_delhi",     "name": "New Delhi",     "country": "IN", "latitude": 28.6139, "longitude": 77.2090},
+    {"city_id": "beijing",       "name": "Beijing",       "country": "CN", "latitude": 39.9042, "longitude": 116.4074},
+    {"city_id": "nairobi",       "name": "Nairobi",       "country": "KE", "latitude": -1.2921, "longitude": 36.8219}
+  ]
+  
