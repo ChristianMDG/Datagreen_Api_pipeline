@@ -21,7 +21,7 @@
 - Configure les secrets GitHub, débogue les erreurs CI
 - Dépend des 3 autres scripts (même en version basique) pour pouvoir les assembler
 
-## 👤 Vous — le reste
+## 👤 Christian — le reste
 - `cities.json`, `requirements.txt`, `.gitignore`, `.env.example`
 - `ARCHITECTURE.md`, `README.md`
 - Rapport de projet, vidéo de démo
