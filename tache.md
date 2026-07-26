@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-| Rôle | Membre | Périmètre |
+| Membre | Périmètre |
 |---|---|---|
 | Nomena | Acquisition API → `data/raw/` |
 | Gaetan | Transformation & validation → `data/clean/` |
