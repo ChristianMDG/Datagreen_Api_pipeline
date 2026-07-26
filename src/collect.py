@@ -4,7 +4,7 @@ import requests
 
 
 CONFIG_FILE = Path("cities.json")
-
+OUTPUT_FILE = Path("data/raw/air_quality_raw.json")
 AIR_QUALITY_API = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
 
@@ -36,12 +36,31 @@ def get_air_quality(city):
 
     response = requests.get(
         AIR_QUALITY_API,
-        params=params
+        params=params,
+        timeout=30
     )
 
     response.raise_for_status()
 
     return response.json()
+
+
+def save_data(data):
+    """
+    Sauvegarde les données collectées dans un fichier JSON.
+    """
+
+    OUTPUT_FILE.parent.mkdir(
+        exist_ok=True
+    )
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            data,
+            f,
+            indent=4,
+            ensure_ascii=False
+        )
 
 
 def main():
@@ -50,14 +69,27 @@ def main():
 
     print(f"{len(cities)} villes chargées\n")
 
-    city = cities[0]
+    results = []
 
-    print(f"Récupération des données pour {city['name']}...")
+    for city in cities:
 
-    air_data = get_air_quality(city)
+        print(f"Collecte : {city['name']}...")
 
-    print("\nDonnées reçues :")
-    print(air_data.keys())
+        try:
+            air_data = get_air_quality(city)
+
+            results.append({
+                "city": city,
+                "air_quality": air_data
+            })
+
+        except requests.exceptions.RequestException as e:
+            print(f"Erreur pour {city['name']} : {e}")
+
+    save_data(results)
+
+    print("\nCollecte terminée.")
+    print(f"Fichier créé : {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
