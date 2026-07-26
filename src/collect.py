@@ -1,112 +1,87 @@
+"""
+collect.py
+Appelle l'API OpenWeatherMap Air Pollution (données ACTUELLES) pour chaque ville
+et enregistre UN fichier JSON brut par ville et par appel dans data/raw/.
+
+Ce script est fait pour être lancé toutes les heures par l'orchestrateur
+(GitHub Actions). Il ne modifie JAMAIS un fichier existant : chaque appel
+crée un nouveau fichier horodaté.
+"""
 import json
-from pathlib import Path
-from datetime import datetime
+import os
+import sys
+from datetime import datetime, timezone
+
 import requests
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
 
-CONFIG_FILE = Path("cities.json")
-RAW_FOLDER = Path("data/raw")
+CITIES_PATH = os.path.join(BASE_DIR, "cities.json")
+RAW_DIR = os.path.join(BASE_DIR, "data", "raw")
 
-AIR_QUALITY_API = "https://air-quality-api.open-meteo.com/v1/air-quality"
+API_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 
 
 def load_cities():
-    """
-    Charge les villes depuis cities.json.
-    """
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+    with open(CITIES_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def get_air_quality(city):
-    """
-    Appelle l'API Open-Meteo pour une ville.
-    """
-
-    params = {
-        "latitude": city["latitude"],
-        "longitude": city["longitude"],
-        "hourly": [
-            "pm10",
-            "pm2_5",
-            "carbon_monoxide",
-            "nitrogen_dioxide",
-            "ozone"
-        ],
-        "timezone": "auto"
-    }
-
-    response = requests.get(
-        AIR_QUALITY_API,
-        params=params,
-        timeout=30
-    )
-
-    response.raise_for_status()
-
-    return response.json()
+def fetch_current(city, api_key, session):
+    params = {"lat": city["latitude"], "lon": city["longitude"], "appid": api_key}
+    resp = session.get(API_URL, params=params, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
 
 
-def save_raw_data(city, data):
-    """
-    Sauvegarde un fichier JSON par ville.
-    """
-
-    RAW_FOLDER.mkdir(
-        exist_ok=True
-    )
-
-    timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
-    )
-
-    filename = (
-        f"{city['city_id']}_{timestamp}.json"
-    )
-
-    filepath = RAW_FOLDER / filename
-
-    with open(filepath, "w", encoding="utf-8") as f:
+def save_raw(city, payload):
+    city_dir = os.path.join(RAW_DIR, city["city_id"])
+    os.makedirs(city_dir, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    filename = f"{city['city_id']}_{ts}.json"
+    path = os.path.join(city_dir, filename)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(
             {
-                "city": city,
-                "air_quality": data
+                "city_id": city["city_id"],
+                "city_name": city["name"],
+                "country": city["country"],
+                "latitude": city["latitude"],
+                "longitude": city["longitude"],
+                "collected_at_utc": datetime.now(timezone.utc).isoformat(),
+                "source": "openweathermap_air_pollution_current",
+                "raw_response": payload,
             },
             f,
-            indent=4,
-            ensure_ascii=False
+            ensure_ascii=False,
+            indent=2,
         )
-
-    print(f"Sauvegardé : {filepath}")
+    return path
 
 
 def main():
+    api_key = os.environ.get("OWM_API_KEY")
+    if not api_key:
+        print("ERREUR: variable d'environnement OWM_API_KEY manquante.", file=sys.stderr)
+        sys.exit(1)
 
     cities = load_cities()
-
-    print(
-        f"{len(cities)} villes chargées\n"
-    )
+    session = requests.Session()
+    errors = 0
 
     for city in cities:
-
-        print(
-            f"Collecte : {city['name']}..."
-        )
-
         try:
-            data = get_air_quality(city)
+            payload = fetch_current(city, api_key, session)
+            path = save_raw(city, payload)
+            print(f"[OK] {city['name']}: {path}")
+        except Exception as exc:  # noqa: BLE001
+            errors += 1
+            print(f"[ERREUR] {city['name']}: {exc}", file=sys.stderr)
 
-            save_raw_data(
-                city,
-                data
-            )
-
-        except requests.exceptions.RequestException as e:
-
-            print(
-                f"Erreur API pour {city['name']} : {e}"
-            )
+    if errors == len(cities):
+        # Toutes les collectes ont échoué -> on fait échouer le run pour être alerté
+        sys.exit(1)
 
 
 if __name__ == "__main__":
