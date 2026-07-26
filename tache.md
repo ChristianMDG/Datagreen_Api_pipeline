@@ -1,122 +1,124 @@
-# Répartition des responsabilités — Pipeline AQI
+# Task Allocation — AQI Pipeline
 
-## Vue d'ensemble
+## Overview
 
-| Membre | Périmètre |
-|---|---|---|
-| Nomena | Acquisition API → `data/raw/` |
+| Member | Scope |
+|---|---|
+| Nomena | API acquisition → `data/raw/` |
 | Gaetan | Transformation & validation → `data/clean/` |
-| Miarintsoa | Modélisation & chargement → Neon |
-| Mahefa | Orchestration & automatisation |
-| Christian | Coordination, infrastructure, livrables |
+| Miarintsoa | Modeling & loading → Neon |
+| Mahefa | Orchestration & automation |
+| Christian | Coordination, infrastructure, deliverables |
 
 ---
 
-## 1. Nomena 
+## 1. Nomena
 
-**Périmètre :** acquisition des données brutes depuis l'API de qualité de l'air
+**Scope:** acquisition of raw data from the air quality API
 
-**Fichiers sous responsabilité :**
+**Files under responsibility:**
 - `src/collect.py`
 - `src/backfill.py`
 
-**Livrables attendus :**
-- Collecte horaire des données courantes pour les 5 villes
-- Backfill historique rejouable (paramétrable en nombre de mois)
-- Un fichier JSON brut par ville et par appel API, stocké dans `data/raw/`
+**Expected deliverables:**
+- Hourly collection of current data for the 5 cities
+- Replayable historical backfill (configurable number of months)
+- One raw JSON file per city and per API call, stored in `data/raw/`
 
-**Critères d'acceptation :**
-- Aucune modification des fichiers `raw/` après écriture
-- Script résilient aux erreurs API (timeout, ville indisponible) sans interrompre les autres villes
-- Gestion de la clé API exclusivement via variable d'environnement
+**Acceptance criteria:**
+- No modification of `raw/` files after they are written
+- Script resilient to API errors (timeout, city unavailable) without interrupting the other cities
+- API key handled exclusively via environment variable
 
-**Dépendances :** aucune — peut démarrer dès l'obtention de la clé API
+**Dependencies:** none — can start as soon as the API key is obtained
 
 ---
 
 ## 2. Gaetan
 
-**Périmètre :** transformation de `raw/` vers un jeu de données propre et validé
+**Scope:** transformation of `raw/` into a clean, validated dataset
 
-**Fichiers sous responsabilité :**
+**Files under responsibility:**
 - `src/build_clean.py`
 - `src/validate_clean.py`
 
-**Livrables attendus :**
-- Reconstruction complète de `clean.csv` à chaque exécution
-- Déduplication sur la clé (ville, heure), tri chronologique
-- Script de validation vérifiant : colonnes attendues, absence de doublons, tri, couverture temporelle minimale, cohérence des valeurs AQI
+**Expected deliverables:**
+- Full rebuild of `clean.csv` on every run
+- Deduplication on the (city, hour) key, chronological sort
+- Validation script checking: expected columns, absence of duplicates, sort order, minimum time coverage, AQI value consistency
 
-**Critères d'acceptation :**
-- `clean.csv` régénérable à l'identique à partir de `raw/` uniquement
-- Le script de validation échoue explicitement (code de sortie non nul) en cas de non-conformité
+**Acceptance criteria:**
+- `clean.csv` can be regenerated identically from `raw/` alone
+- The validation script fails explicitly (non-zero exit code) on non-compliance
 
-**Dépendances :** nécessite un échantillon de fichiers `raw/` (réels ou factices) pour développer et tester
+**Dependencies:** requires a sample of `raw/` files (real or mock) to develop and test
 
 ---
 
-## 3. Miarintsoa 
+## 3. Miarintsoa
 
-**Périmètre :** modélisation dimensionnelle et chargement dans Neon
+**Scope:** dimensional modeling and loading into Neon
 
-**Fichiers sous responsabilité :**
+**Files under responsibility:**
 - `sql/schema.sql`
 - `src/load_warehouse.py`
 
-**Livrables attendus :**
-- Schéma en étoile : `dim_city`, `dim_time`, `fact_air_quality`
-- Script de chargement idempotent (upsert), sans duplication en cas de réexécution
+**Expected deliverables:**
+- Star schema: `dim_city`, `dim_time`, `fact_air_quality`
+- Idempotent loading script (upsert), no duplication on re-run
 
-**Critères d'acceptation :**
-- Aucune mesure dans les dimensions, aucune colonne descriptive dans les faits
-- Contrainte d'unicité `(city_key, time_key)` sur la table de faits
-- Connexion sécurisée (SSL) via `DATABASE_URL`
+**Acceptance criteria:**
+- No measures in the dimensions, no descriptive columns in the fact table
+- Uniqueness constraint `(city_key, time_key)` on the fact table
+- Secure (SSL) connection via `DATABASE_URL`
 
-**Dépendances :** nécessite un `clean.csv` (réel ou factice) pour développer et tester
+**Dependencies:** requires a `clean.csv` (real or mock) to develop and test
 
 ---
 
 ## 4. Mahefa
 
-**Périmètre :** orchestration et automatisation de bout en bout
+**Scope:** end-to-end orchestration and automation
 
-**Fichiers sous responsabilité :**
+**Files under responsibility:**
 - `.github/workflows/hourly_collect.yml`
 - `.github/workflows/manual_backfill.yml`
 
-**Livrables attendus :**
-- Workflow de collecte horaire (cron)
-- Workflow de backfill déclenchable manuellement
-- Enchaînement complet : collecte/backfill → transformation → validation → chargement → commit automatique
+**Expected deliverables:**
+- Hourly collection workflow (cron)
+- Manually triggerable backfill workflow
+- Full chain: collect/backfill → transform → validate → load → automatic commit
 
-**Critères d'acceptation :**
-- Runs visibles et réussis dans l'onglet Actions, sur plusieurs jours distincts
-- Secrets (`OWM_API_KEY`, `DATABASE_URL`) exclusivement gérés via GitHub Secrets
-- Gestion de la concurrence entre workflows (pas d'exécutions qui se chevauchent)
+**Acceptance criteria:**
+- Successful runs visible in the Actions tab, across multiple distinct days
+- Secrets (`OWM_API_KEY`, `DATABASE_URL`) managed exclusively via GitHub Secrets
+- Concurrency handling between workflows (no overlapping runs)
 
-**Dépendances :** nécessite les scripts des trois rôles précédents, au moins dans une version fonctionnelle minimale
+**Dependencies:** requires the scripts from the three preceding roles, at least in a minimally functional version
 
 ---
 
 ## 5. Christian
 
-**Périmètre :** coordination générale, infrastructure partagée, livrables transverses
+**Scope:** overall coordination, shared infrastructure, cross-cutting deliverables
 
-**Fichiers sous responsabilité :**
+**Files under responsibility:**
 - `cities.json`, `requirements.txt`, `.gitignore`, `.env.example`
 - `ARCHITECTURE.md`, `README.md`
-- Rapport de projet, vidéo de démonstration
+- Project report, demo video
 
-**Livrables attendus :**
-- Documentation complète (architecture, contrat de données, schéma warehouse)
-- Provisioning de l'infrastructure partagée (projet Neon, secrets GitHub)
-- Coordination Git (structure de branches, revue des Pull Requests)
-- Rapport de projet et vidéo de démonstration finale
+**Expected deliverables:**
+- Complete documentation (architecture, data contract, warehouse schema)
+- Provisioning of shared infrastructure (Neon project, GitHub secrets)
+- Git coordination (branching structure, Pull Request review)
+- Final project report and demo video
 
-**Critères d'acceptation :**
-- Documentation permettant à un tiers (ex. IA1) de consommer les données sans ambiguïté
-- Historique Git reflétant la contribution des 5 membres
+**Acceptance criteria:**
+- Documentation allowing a third party (e.g. the IA1 course) to consume the data without ambiguity
+- Git history reflecting the contribution of all 5 members
 
-**Dépendances :** coordonne les livrables des 4 autres rôles, sans bloquer leur avancement individuel
+**Dependencies:** coordinates the deliverables of the 4 other roles, without blocking their individual progress
 
 ---
+
+Want me to also translate the dependency diagram and export this as a downloadable `.md` file?
