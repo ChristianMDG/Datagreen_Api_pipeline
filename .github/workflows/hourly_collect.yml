@@ -2,8 +2,8 @@ name: Collecte horaire AQI
 
 on:
   schedule:
-    - cron: "5 * * * *"   # à la 5e minute de chaque heure, 24h/24
-  workflow_dispatch: {}     # permet aussi un déclenchement manuel
+    - cron: "5 * * * *" 
+  workflow_dispatch: {}
 
 permissions:
   contents: write

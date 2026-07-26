@@ -1,0 +1,48 @@
+name: Backfill manuel
+
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "Nombre de mois d'historique à récupérer"
+        required: true
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Backfill -> raw/
+        env:
+          OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+        run: python src/backfill.py --months ${{ github.event.inputs.months }}
+
+      - name: Reconstruire clean.csv
+        run: python src/build_clean.py
+
+      - name: Valider
+        run: python src/validate_clean.py
+
+      - name: Charger le warehouse
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python src/load_warehouse.py
+
+      - name: Commit & push
+        run: |
+          git config user.name "aqi-pipeline-bot"
+          git config user.email "actions@github.com"
+          git add data/raw data/clean
+          git diff --quiet --cached || git commit -m "chore: backfill ${{ github.event.inputs.months }} mois"
+          git push
