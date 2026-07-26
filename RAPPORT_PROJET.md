@@ -12,13 +12,8 @@ Deploy a fully automated, 24/7 pipeline to collect air quality (AQI) data for 5 
 
 ---
 
-## 2. Team Working Method
 
-### 2.1 General Organization
-
-[To be completed: how the team coordinated — communication channel (WhatsApp/Discord/Slack?), frequency of progress check-ins, task tracking tool used (Trello/GitHub Issues/shared board?)]
-
-### 2.2 Task Allocation
+### 2 Task Allocation
 
 | Member | Responsibility | Files / Deliverables |
 |---|---|---|
