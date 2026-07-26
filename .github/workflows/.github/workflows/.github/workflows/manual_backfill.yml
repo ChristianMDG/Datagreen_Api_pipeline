@@ -1,0 +1,32 @@
+name: Backfill manuel
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Nombre de jours en arrière"
+        required: false
+        default: "7"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: |
+          echo "API_KEY=${{ secrets.API_KEY }}" > .env
+          echo "NEON_HOST=${{ secrets.NEON_HOST }}" >> .env
+          echo "NEON_DATABASE=${{ secrets.NEON_DATABASE }}" >> .env
+          echo "NEON_USER=${{ secrets.NEON_USER }}" >> .env
+          echo "NEON_PASSWORD=${{ secrets.NEON_PASSWORD }}" >> .env
+          echo "NEON_PORT=${{ secrets.NEON_PORT }}" >> .env
+      - run: python src/backfill.py --days "${{ github.event.inputs.days }}"
+      - run: python src/build_clean.py
+      - run: python src/validate_clean.py
+      - run: python src/load_warehouse.py
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore: backfill manuel"
