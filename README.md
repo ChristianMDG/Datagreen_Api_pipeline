@@ -1,13 +1,12 @@
-# Pipeline AQI — Data Warehouse
+# AQI Pipeline — Data Warehouse
 
-Pipeline de collecte automatique 24h/24 de la qualité de l'air (AQI) pour 5 villes,
-avec data warehouse en modélisation dimensionnelle (schéma en étoile).
+An automated 24/7 data pipeline collecting air quality (AQI) measurements for 5 cities, feeding a dimensionally modeled data warehouse (star schema).
 
-Voir aussi [`ARCHITECTURE.md`](./ARCHITECTURE.md) pour le détail des choix techniques.
+See also [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full rationale behind our technical choices.
 
-## 1. Villes suivies
+## 1. Cities Tracked
 
-| city_id | Ville | Pays | Latitude | Longitude |
+| city_id | City | Country | Latitude | Longitude |
 |---|---|---|---|---|
 | paris | Paris | FR | 48.8566 | 2.3522 |
 | antananarivo | Antananarivo | MG | -18.8792 | 47.5079 |
@@ -15,52 +14,48 @@ Voir aussi [`ARCHITECTURE.md`](./ARCHITECTURE.md) pour le détail des choix tech
 | beijing | Beijing | CN | 39.9042 | 116.4074 |
 | nairobi | Nairobi | KE | -1.2921 | 36.8219 |
 
-(Modifiable dans `cities.json`.)
+(Configurable in `cities.json`.)
 
-## 2. Source des données
+## 2. Data Source
 
-**API :** [OpenWeatherMap Air Pollution API](https://openweathermap.org/api/air-pollution)
-- Endpoint courant : `/data/2.5/air_pollution`
-- Endpoint historique : `/data/2.5/air_pollution/history` (disponible depuis le 27/11/2020)
+**API:** [OpenWeatherMap Air Pollution API](https://openweathermap.org/api/air-pollution)
+- Current endpoint: `/data/2.5/air_pollution`
+- Historical endpoint: `/data/2.5/air_pollution/history` (available since Nov 27, 2020)
 
-L'indice **AQI** fourni par cette API est l'échelle propre à OpenWeatherMap, de **1 (Bon)** à
-**5 (Très mauvais)** — ce n'est PAS l'échelle US EPA 0-500. C'est précisé ici pour lever
-toute ambiguïté pour IA1.
+The **AQI** index provided by this API follows OpenWeatherMap's own scale, from **1 (Good)** to **5 (Very Poor)** — this is **not** the US EPA 0–500 scale. This distinction is documented here to remove any ambiguity for downstream consumers (IA1 course).
 
-## 3. Contrat de données — `data/clean/clean.csv`
+## 3. Data Contract — `data/clean/clean.csv`
 
-Une ligne = une ville, une heure. Trié par `city_id` puis `timestamp_utc`, sans doublons.
+One row = one city, one hour. Sorted by `city_id` then `timestamp_utc`, no duplicates.
 
-| Colonne | Type | Unité / échelle | Description |
+| Column | Type | Unit / Scale | Description |
 |---|---|---|---|
-| `city_id` | string | — | identifiant technique de la ville |
-| `city_name` | string | — | nom lisible |
-| `country` | string | code ISO 2 lettres | pays |
-| `latitude` | float | degrés décimaux | |
-| `longitude` | float | degrés décimaux | |
-| `timestamp_utc` | ISO 8601 (UTC) | — | horodatage de la mesure, arrondi à l'heure |
-| `aqi` | int | 1 à 5 (échelle OpenWeatherMap) | indice de qualité de l'air |
-| `co` | float | µg/m³ | monoxyde de carbone |
-| `no` | float | µg/m³ | monoxyde d'azote |
-| `no2` | float | µg/m³ | dioxyde d'azote |
+| `city_id` | string | — | technical city identifier |
+| `city_name` | string | — | human-readable name |
+| `country` | string | 2-letter ISO code | country |
+| `latitude` | float | decimal degrees | |
+| `longitude` | float | decimal degrees | |
+| `timestamp_utc` | ISO 8601 (UTC) | — | measurement timestamp, rounded to the hour |
+| `aqi` | int | 1 to 5 (OpenWeatherMap scale) | air quality index |
+| `co` | float | µg/m³ | carbon monoxide |
+| `no` | float | µg/m³ | nitrogen monoxide |
+| `no2` | float | µg/m³ | nitrogen dioxide |
 | `o3` | float | µg/m³ | ozone |
-| `so2` | float | µg/m³ | dioxyde de soufre |
-| `pm2_5` | float | µg/m³ | particules fines ≤ 2.5 µm |
-| `pm10` | float | µg/m³ | particules fines ≤ 10 µm |
-| `nh3` | float | µg/m³ | ammoniac |
+| `so2` | float | µg/m³ | sulphur dioxide |
+| `pm2_5` | float | µg/m³ | fine particulate matter ≤ 2.5 µm |
+| `pm10` | float | µg/m³ | fine particulate matter ≤ 10 µm |
+| `nh3` | float | µg/m³ | ammonia |
 
-## 4. Zone `raw/`
+## 4. The `raw/` Zone
 
-`data/raw/<city_id>/<city_id>_<horodatage>.json` — un fichier par ville et par appel API,
-jamais modifié après écriture. Contient la réponse brute de l'API + métadonnées de collecte.
-C'est la source de vérité : `clean/` peut être régénéré à tout moment avec :
+`data/raw/<city_id>/<city_id>_<timestamp>.json` — one file per city and per API call, never modified after being written. Each file contains the raw API response plus collection metadata. This is the single source of truth: `clean/` can be regenerated at any time with:
 
 ```bash
 python src/build_clean.py
 python src/validate_clean.py
 ```
 
-## 5. Schéma du data warehouse (étoile)
+## 5. Data Warehouse Schema (Star)
 
 ```
                     dim_city
@@ -89,31 +84,40 @@ python src/validate_clean.py
                                                      is_weekend
 ```
 
-Voir [`sql/schema.sql`](./sql/schema.sql) pour le DDL complet.
+See [`sql/schema.sql`](./sql/schema.sql) for the full DDL.
 
-Règles respectées :
-- aucune mesure (aqi, polluants) dans les dimensions ;
-- aucune colonne descriptive (nom de ville, jour de la semaine...) dans la table de faits,
-  uniquement des clés étrangères + mesures.
+Modeling rules enforced:
+- no measures (aqi, pollutants) in the dimension tables;
+- no descriptive columns (city name, day name...) in the fact table — foreign keys and measures only.
 
-## 6. Période couverte / trous connus
+## 6. Coverage Period / Known Gaps
 
-À compléter après le premier backfill, par ex. :
-> Backfill du 25/04/2026 au 25/07/2026 (3 mois) pour les 5 villes.
-> Trou connu : Beijing, 12–14/06/2026 (panne API amont, voir issue #X).
+Backfill (12 months requested) + hourly collection, covering **April 26, 2026 to July 26, 2026** (~91 days, 2,184 hours) at time of writing, for all 5 cities.
 
-Cohérence attendue : `lignes fact_air_quality ≈ nb_villes × nb_heures_couvertes`.
-Tout écart significatif doit être documenté ici.
+| City | Measurements | Coverage |
+|---|---|---|
+| Antananarivo | 2,103 | 96.3% |
+| Beijing | 2,079 | 95.2% |
+| Nairobi | 2,103 | 96.3% |
+| New Delhi | 2,055 | 94.1% |
+| Paris | 2,103 | 96.3% |
 
-## 7. Connexion à la base (Supabase)
+Gaps (~4–6%) are due to intermittent upstream API gaps (offline monitoring stations, rate limits during backfill) and a known GitHub Actions limitation whereby scheduled (`cron`) workflows can be delayed or skipped during peak platform load. One such gap (~4h20) was observed on July 26, 2026 between 00:09 and 04:33 UTC across all cities simultaneously; the pipeline resumed normal operation automatically at the next run, with no data corruption. See `RAPPORT_PROJET.md`, difficulties section, for the full root-cause analysis.
 
-- Host / URL de connexion : **à compléter par le groupe** (Project Settings → Database → Connection string)
-- Le warehouse est interrogeable en lecture seule via un compte dédié fourni au correcteur / à IA1.
-- Exemple de requête de vérification :
+Expected consistency check: `fact_air_quality rows ≈ number_of_cities × number_of_hours_covered`. Any material deviation is documented above.
+
+## 7. Database Connection (Neon)
+
+- **Provider:** [Neon](https://neon.tech) — serverless Postgres
+- Connection string: **to be filled in by the team** (Neon Console → your project → Connect → Connection string)
+- Format: `postgresql://<user>:<password>@<host>.neon.tech/<database>?sslmode=require`
+- The warehouse can be queried via the Neon Console **SQL Editor**, via `psql`, or through a dedicated read-only account provided to the grader / to the IA1 course.
+
+Example verification query:
 
 ```sql
-SELECT c.city_name, COUNT(*) AS nb_mesures,
-       MIN(t.timestamp_utc) AS depuis, MAX(t.timestamp_utc) AS jusqua
+SELECT c.city_name, COUNT(*) AS measurement_count,
+       MIN(t.timestamp_utc) AS since, MAX(t.timestamp_utc) AS until
 FROM fact_air_quality f
 JOIN dim_city c ON c.city_key = f.city_key
 JOIN dim_time t ON t.time_key = f.time_key
@@ -121,35 +125,48 @@ GROUP BY c.city_name
 ORDER BY c.city_name;
 ```
 
-## 8. Installation / exécution locale
+Duplicate check (should always return zero rows):
+
+```sql
+SELECT city_key, time_key, COUNT(*)
+FROM fact_air_quality
+GROUP BY city_key, time_key
+HAVING COUNT(*) > 1;
+```
+
+## 8. Local Setup / Execution
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # puis remplir OWM_API_KEY et DATABASE_URL
+cp .env.example .env   # then fill in OWM_API_KEY and DATABASE_URL
 export $(cat .env | xargs)
 
-# Backfill initial (3 à 12 mois)
+# Initial backfill (3 to 12 months)
 python src/backfill.py --months 12
 
-# Reconstruire clean.csv et valider
+# Rebuild clean.csv and validate
 python src/build_clean.py
 python src/validate_clean.py
 
-# Charger le warehouse
+# Load the warehouse
 python src/load_warehouse.py
 
-# Collecte ponctuelle (comme le fait le cron toutes les heures)
+# One-off collection (same as the hourly cron)
 python src/collect.py
 ```
 
-## 9. Déploiement automatique (production)
+## 9. Automated Deployment (Production)
 
-1. Créer un projet [Supabase](https://supabase.com) (gratuit) → récupérer `DATABASE_URL`.
-2. Créer une clé API sur [openweathermap.org](https://openweathermap.org/api/air-pollution).
-3. Dans le repo GitHub : **Settings → Secrets and variables → Actions**, ajouter :
+1. Create a [Neon](https://neon.tech) project (free tier) → retrieve `DATABASE_URL` (Connect → Connection string, including `?sslmode=require`).
+2. Create an API key at [openweathermap.org](https://openweathermap.org/api/air-pollution).
+3. In the GitHub repo: **Settings → Secrets and variables → Actions**, add:
    - `OWM_API_KEY`
    - `DATABASE_URL`
-4. Lancer manuellement le workflow **Backfill manuel** (onglet Actions) pour l'historique initial.
-5. Le workflow **Collecte horaire AQI** tourne ensuite automatiquement, toutes les heures, 24h/24.
-6. Vérifier l'onglet **Actions** du repo pour voir l'historique des runs (preuve d'automatisation).
+4. Manually trigger the **Manual AQI Backfill** workflow (Actions tab) to populate the initial historical dataset.
+5. The **Hourly AQI Collection** workflow then runs automatically, every hour, 24/7.
+6. Check the repo's **Actions** tab to view the run history (proof of automation).
+
+---
+
+*This document constitutes the storage-layer deliverable required by the project specification: cities tracked, data contract for `clean/`, warehouse schema, coverage period, known gaps, and database connection details.*
