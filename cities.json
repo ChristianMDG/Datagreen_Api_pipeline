@@ -4,5 +4,4 @@
     {"city_id": "new_delhi",     "name": "New Delhi",     "country": "IN", "latitude": 28.6139, "longitude": 77.2090},
     {"city_id": "beijing",       "name": "Beijing",       "country": "CN", "latitude": 39.9042, "longitude": 116.4074},
     {"city_id": "nairobi",       "name": "Nairobi",       "country": "KE", "latitude": -1.2921, "longitude": 36.8219}
-  ]
-  
+]
