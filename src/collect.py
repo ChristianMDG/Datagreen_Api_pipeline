@@ -1,16 +1,18 @@
 import json
 from pathlib import Path
+from datetime import datetime
 import requests
 
 
 CONFIG_FILE = Path("cities.json")
-OUTPUT_FILE = Path("data/raw/air_quality_raw.json")
+RAW_FOLDER = Path("data/raw")
+
 AIR_QUALITY_API = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
 
 def load_cities():
     """
-    Charge la liste des villes depuis le fichier JSON.
+    Charge les villes depuis cities.json.
     """
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -18,7 +20,7 @@ def load_cities():
 
 def get_air_quality(city):
     """
-    Récupère la qualité de l'air pour une ville.
+    Appelle l'API Open-Meteo pour une ville.
     """
 
     params = {
@@ -45,51 +47,66 @@ def get_air_quality(city):
     return response.json()
 
 
-def save_data(data):
+def save_raw_data(city, data):
     """
-    Sauvegarde les données collectées dans un fichier JSON.
+    Sauvegarde un fichier JSON par ville.
     """
 
-    OUTPUT_FILE.parent.mkdir(
+    RAW_FOLDER.mkdir(
         exist_ok=True
     )
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    timestamp = datetime.now().strftime(
+        "%Y%m%d_%H%M%S"
+    )
+
+    filename = (
+        f"{city['city_id']}_{timestamp}.json"
+    )
+
+    filepath = RAW_FOLDER / filename
+
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(
-            data,
+            {
+                "city": city,
+                "air_quality": data
+            },
             f,
             indent=4,
             ensure_ascii=False
         )
+
+    print(f"Sauvegardé : {filepath}")
 
 
 def main():
 
     cities = load_cities()
 
-    print(f"{len(cities)} villes chargées\n")
-
-    results = []
+    print(
+        f"{len(cities)} villes chargées\n"
+    )
 
     for city in cities:
 
-        print(f"Collecte : {city['name']}...")
+        print(
+            f"Collecte : {city['name']}..."
+        )
 
         try:
-            air_data = get_air_quality(city)
+            data = get_air_quality(city)
 
-            results.append({
-                "city": city,
-                "air_quality": air_data
-            })
+            save_raw_data(
+                city,
+                data
+            )
 
         except requests.exceptions.RequestException as e:
-            print(f"Erreur pour {city['name']} : {e}")
 
-    save_data(results)
-
-    print("\nCollecte terminée.")
-    print(f"Fichier créé : {OUTPUT_FILE}")
+            print(
+                f"Erreur API pour {city['name']} : {e}"
+            )
 
 
 if __name__ == "__main__":
