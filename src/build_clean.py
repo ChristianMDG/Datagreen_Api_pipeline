@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-OUTPUT_FILE = CLEAN_DIR / "aqi_clean.csv"
+OUTPUT_FILE = CLEAN_DIR / "clean.csv"
 
 FINAL_COLUMNS = [
     "city",
