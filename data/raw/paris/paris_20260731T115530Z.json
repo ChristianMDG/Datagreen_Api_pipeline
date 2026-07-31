@@ -1,0 +1,33 @@
+{
+  "city_id": "paris",
+  "city_name": "Paris",
+  "country": "FR",
+  "latitude": 48.8566,
+  "longitude": 2.3522,
+  "collected_at_utc": "2026-07-31T11:55:30.617375+00:00",
+  "source": "openweathermap_air_pollution_current",
+  "raw_response": {
+    "coord": {
+      "lon": 2.3522,
+      "lat": 48.8566
+    },
+    "list": [
+      {
+        "main": {
+          "aqi": 2
+        },
+        "components": {
+          "co": 103.6,
+          "no": 0.24,
+          "no2": 1.22,
+          "o3": 84.95,
+          "so2": 0.7,
+          "pm2_5": 6.41,
+          "pm10": 8.66,
+          "nh3": 3.06
+        },
+        "dt": 1785498930
+      }
+    ]
+  }
+}
