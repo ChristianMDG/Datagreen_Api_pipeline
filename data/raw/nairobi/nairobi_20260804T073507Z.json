@@ -1,0 +1,33 @@
+{
+  "city_id": "nairobi",
+  "city_name": "Nairobi",
+  "country": "KE",
+  "latitude": -1.2921,
+  "longitude": 36.8219,
+  "collected_at_utc": "2026-08-04T07:35:07.525642+00:00",
+  "source": "openweathermap_air_pollution_current",
+  "raw_response": {
+    "coord": {
+      "lon": 36.8219,
+      "lat": -1.2921
+    },
+    "list": [
+      {
+        "main": {
+          "aqi": 1
+        },
+        "components": {
+          "co": 109.27,
+          "no": 0.03,
+          "no2": 0.29,
+          "o3": 52.96,
+          "so2": 0.14,
+          "pm2_5": 2.38,
+          "pm10": 4.11,
+          "nh3": 0.59
+        },
+        "dt": 1785828907
+      }
+    ]
+  }
+}
