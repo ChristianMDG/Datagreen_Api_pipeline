@@ -1,0 +1,33 @@
+{
+  "city_id": "antananarivo",
+  "city_name": "Antananarivo",
+  "country": "MG",
+  "latitude": -18.8792,
+  "longitude": 47.5079,
+  "collected_at_utc": "2026-08-08T04:52:20.824783+00:00",
+  "source": "openweathermap_air_pollution_current",
+  "raw_response": {
+    "coord": {
+      "lon": 47.5079,
+      "lat": -18.8792
+    },
+    "list": [
+      {
+        "main": {
+          "aqi": 1
+        },
+        "components": {
+          "co": 137.52,
+          "no": 0.16,
+          "no2": 0.98,
+          "o3": 31.03,
+          "so2": 0.19,
+          "pm2_5": 3.94,
+          "pm10": 7.09,
+          "nh3": 0.84
+        },
+        "dt": 1786164740
+      }
+    ]
+  }
+}
